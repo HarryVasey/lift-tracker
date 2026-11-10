@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>4-Week Lift Tracker</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--tx:#14181f;--mut:#667085;--ac:#2f5597;--ok:#1f9d55;--bd:#dfe3ea;--chip:#eef1f6;--ssb:#e8f0fb;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1218;--card:#1a1f29;--tx:#eef1f6;--mut:#98a2b3;--ac:#7aa2ff;--ok:#3ccf7a;--bd:#2b3240;--chip:#252c39;--ssb:#1d2a42;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1218;--card:#1a1f29;--tx:#eef1f6;--mut:#98a2b3;--ac:#7aa2ff;--ok:#3ccf7a;--bd:#2b3240;--chip:#252c39;--ssb:#1d2a42;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.35 -apple-system,system-ui,"Segoe UI",Arial,sans-serif;padding:12px 12px 110px}
+h1{font-size:20px;margin:4px 0 10px}
+.tabs{display:flex;gap:6px;margin-bottom:8px}
+.tabs button{flex:1;padding:10px 2px;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:10px;font:600 14px inherit;font-family:inherit}
+.tabs button.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.tabs.d button{font-size:12px;line-height:1.15}
+details{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin:8px 0}
+summary{font-weight:600}
+.rm{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.rm label{font-size:13px;color:var(--mut)}
+.rm input{width:100%;box-sizing:border-box;margin-top:3px;padding:10px;font-size:18px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx)}
+.prog{color:var(--mut);font-size:14px;margin:8px 2px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin:8px 0}
+.card.ss{background:var(--ssb);border-left:4px solid var(--ac)}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.ld{font-size:20px;font-weight:700;color:var(--ac);white-space:nowrap}
+.sub{color:var(--mut);font-size:14px;margin:2px 0 10px}
+.sets{display:flex;gap:8px;flex-wrap:wrap}
+.chip{width:52px;height:52px;border-radius:50%;border:2px solid var(--bd);background:var(--chip);color:var(--tx);font:700 18px inherit;font-family:inherit}
+.chip.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.am{margin-top:10px;font-size:14px;color:var(--mut)}
+.am input{width:64px;padding:8px;font-size:16px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);margin:0 6px}
+.rst{display:block;margin:14px auto;background:none;border:0;color:var(--mut);text-decoration:underline;font-size:14px}
+#rest{position:fixed;left:0;right:0;bottom:0;background:var(--ac);color:#fff;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:10px;z-index:5}
+#rest[hidden]{display:none}
+#rt{font-size:30px;font-weight:700;flex:1;font-variant-numeric:tabular-nums}
+#rest button{background:rgba(255,255,255,.22);color:#fff;border:0;border-radius:10px;padding:10px 12px;font:600 15px inherit;font-family:inherit}
+</style>
+</head>
+<body>
+<h1>4-Week Lift Tracker</h1>
+<div class="tabs" id="wt"></div>
+<div class="tabs d" id="dt"></div>
+<details id="set"><summary>My 1RMs (kg)</summary>
+<div class="rm" id="rm"></div>
+<p class="prog">Example numbers are pre-filled. Replace them with yours and every weight updates.</p></details>
+<div class="prog" id="pg"></div>
+<div id="ls"></div>
+<button class="rst" id="rd">Reset this day</button>
+<div id="rest" hidden><span id="rt">0:00</span><button id="m">-15</button><button id="p">+15</button><button id="x">Skip</button></div>
+<script>
+var $=function(s){return document.querySelector(s)};
+var LB={bench:"Bench",ohp:"Overhead Press",squat:"Squat",dl:"Deadlift"};
+var MS=[[4,8,.70],[4,6,.75],[4,5,.80],[1,"AMRAP",.85]];
+var AS=[3,3,4,3],RC=["12","12","10","10"],RI=["15","15","12","12"],RB=["8-10","9-11","10-12","10-12 (add load)"],AF=[1,1.03,1.06,1.09];
+var DN=["Chest + Tris","Back + Bis","Shoulders + Core","Legs"];
+// [name, base lift, ratio ("M" = main lift), rest s, rep type, D = dumbbell rounding, superset]
+var D=[
+[["Flat Barbell Bench Press","bench","M",150],["Dips (chest lean)",0,0,90,"b"],["Dumbbell Fly (each)","bench",.17,0,"i","D",1],["Close-Grip DB Press (each)","bench",.32,90,"c","D",1],["Seated DB Shoulder Press (each)","ohp",.38,90,"c","D"],["Skull Crushers (EZ bar)","bench",.30,90,"c"],["Tricep Rope Pushdown","bench",.28,60,"i"]],
+[["Deadlift","dl","M",180],["Pull-Ups",0,0,90,"b"],["Barbell Row","bench",.75,90,"c"],["Lat Pulldown","bench",.60,90,"c"],["EZ-Bar Curl","bench",.27,90,"c"],["Incline DB Curl (each)","bench",.11,0,"i","D",1],["Hammer Curl (each)","bench",.13,60,"i","D",1]],
+[["Standing Overhead Press","ohp","M",150],["Lateral Raise (each)","ohp",.13,0,"i","D",1],["Front Raise (each)","ohp",.15,60,"i","D",1],["Incline Machine Press","bench",.60,90,"c"],["Face Pull","bench",.30,60,"i"],["Hanging Leg Raise",0,0,60,["10-12","12-15","12-15","15+"]],["Cable Crunch","bench",.40,60,"i"],["Plank",0,0,60,["45 s","50 s","60 s","60 s+"]]],
+[["Back Squat","squat","M",180],["Romanian Deadlift","dl",.55,120,"c"],["Leg Press","squat",1.2,120,"c"],["Leg Curl","squat",.30,60,"i"],["Standing Calf Raise","squat",.5,60,"i"],["Straight-Arm Pulldown","bench",.25,0,"i","B",1],["Cable Curl","bench",.22,60,"i","B",1]]
+];
+var S={rm:{bench:100,ohp:60,squat:140,dl:180},w:0,d:0,done:{},am:{},ok:0};
+try{var q=JSON.parse(localStorage.getItem("lt1"));if(q&&q.rm)S=q}catch(e){}
+S.rt=S.rt||{};S.rb=S.rb||2.5;S.rd=S.rd||2;
+function save(){try{localStorage.setItem("lt1",JSON.stringify(S))}catch(e){}}
+function rnd(x,s){return Math.round(x/s)*s}
+function fmt(n){return String(Math.round(n*100)/100)}
+function lines(w,d){var o=[];D[d].forEach(function(e){
+ var n=e[0],b=e[1],r=e[2],rest=e[3],rp=e[4],ty=e[5],ss=e[6];
+ if(r==="M"){var m=MS[w];
+  o.push({n:n+(w==3?" · top set":""),s:m[0],r:m[1],l:rnd(S.rm[b]*m[2],S.rb),rest:rest,top:w==3?b:0});
+  if(w==3)o.push({n:"Back-off sets",s:2,r:6,l:rnd(S.rm[b]*.75,S.rb),rest:rest});
+ }else{
+  var rr=Array.isArray(rp)?rp[w]:({c:RC,i:RI,b:RB})[rp][w];
+  var rt=S.rt[n]>0?S.rt[n]:r;o.push({n:n,s:AS[w],r:rr,l:b?rnd(S.rm[b]*rt*AF[w],ty==="D"?S.rd:S.rb):"BW",rest:rest,ss:ss,b:b,rt:rt});
+ }});return o}
+function render(){
+ $("#wt").innerHTML=[0,1,2,3].map(function(i){return '<button data-w="'+i+'"'+(S.w==i?' class="on"':'')+'>Week '+(i+1)+'</button>'}).join("");
+ $("#dt").innerHTML=DN.map(function(t,i){return '<button data-d="'+i+'"'+(S.d==i?' class="on"':'')+'>Day '+(i+1)+'<br>'+t+'</button>'}).join("");
+ var L=lines(S.w,S.d),tot=0,dn=0,h="";
+ L.forEach(function(x,i){
+  var c="";for(var j=0;j<x.s;j++){var k=S.w+"."+S.d+"."+i+"."+j,on=S.done[k];tot++;if(on)dn++;
+   c+='<button class="chip'+(on?' on':'')+'" data-k="'+k+'" data-r="'+x.rest+'">'+(j+1)+'</button>'}
+  var am="";
+  if(x.b)am='<div class="am">Ratio<input type="number" inputmode="decimal" step="0.01" min="0" data-rt="'+x.n+'" value="'+x.rt+'"> × '+LB[x.b]+' 1RM (Week 1 weight)</div>';
+  if(x.top){var v=S.am[x.top]||"";am='<div class="am">AMRAP reps<input type="number" inputmode="numeric" min="0" data-am="'+x.top+'" data-l="'+x.l+'" value="'+v+'">est. 1RM <b>'+est(x.l,v)+'</b></div>'}
+  h+='<div class="card'+(x.ss?' ss':'')+'"><div class="top"><b>'+x.n+'</b><span class="ld">'+(x.l==="BW"?"BW":fmt(x.l)+" kg")+'</span></div><div class="sub">'+x.s+" × "+x.r+(x.rest?" · rest "+x.rest+" s":(x.ss?" · superset, no rest":""))+'</div><div class="sets">'+c+'</div>'+am+'</div>'});
+ $("#ls").innerHTML=h;
+ $("#pg").textContent=dn+" / "+tot+" sets done"+(S.w==3?" · log AMRAP reps to get a new 1RM estimate":"");
+ $("#rm").innerHTML=Object.keys(LB).map(function(k){return '<div><label>'+LB[k]+'</label><input type="number" inputmode="decimal" data-rm="'+k+'" value="'+S.rm[k]+'"></div>'}).join("")+'<div><label>Barbell/cable step (kg)</label><input type="number" inputmode="decimal" step="0.25" data-rb="1" value="'+S.rb+'"></div><div><label>Dumbbell step (kg)</label><input type="number" inputmode="decimal" step="0.25" data-rd="1" value="'+S.rd+'"></div>';
+ $("#set").open=!S.ok}
+function est(l,v){return v>0?fmt(rnd(l*(1+v/30),2.5))+" kg":"-"}
+var T=null,end=0;
+function beep(){try{var a=new(window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator();o.connect(a.destination);o.frequency.value=880;o.start();o.stop(a.currentTime+.4)}catch(e){}try{navigator.vibrate&&navigator.vibrate(300)}catch(e){}}
+function tick(){var r=Math.ceil((end-Date.now())/1000);
+ if(r<=0){clearInterval(T);$("#rt").textContent="Go!";beep();setTimeout(function(){if(Date.now()>=end)$("#rest").hidden=true},4000);return}
+ $("#rt").textContent=Math.floor(r/60)+":"+("0"+r%60).slice(-2)}
+function rest(sec){end=Date.now()+sec*1000;$("#rest").hidden=false;clearInterval(T);T=setInterval(tick,250);tick()}
+function adj(ms){end=Math.max(Date.now(),end)+ms;$("#rest").hidden=false;clearInterval(T);T=setInterval(tick,250);tick()}
+document.addEventListener("click",function(e){
+ var t=e.target.closest("button");if(!t)return;
+ if(t.dataset.w!=null){S.w=+t.dataset.w;save();render()}
+ else if(t.dataset.d!=null){S.d=+t.dataset.d;save();render()}
+ else if(t.dataset.k){var k=t.dataset.k;S.done[k]=!S.done[k];save();t.classList.toggle("on",!!S.done[k]);
+  if(S.done[k]&&+t.dataset.r>0)rest(+t.dataset.r);
+  var tot=document.querySelectorAll(".chip").length,dn=document.querySelectorAll(".chip.on").length;
+  $("#pg").textContent=dn+" / "+tot+" sets done"+(S.w==3?" · log AMRAP reps to get a new 1RM estimate":"")}
+ else if(t.id=="rd"){Object.keys(S.done).forEach(function(k){if(k.indexOf(S.w+"."+S.d+".")==0)delete S.done[k]});save();render()}
+ else if(t.id=="m")adj(-15000);else if(t.id=="p")adj(15000);
+ else if(t.id=="x"){clearInterval(T);$("#rest").hidden=true}});
+document.addEventListener("input",function(e){var t=e.target;
+ if(t.dataset.rm){var v=parseFloat(t.value);if(v>0){S.rm[t.dataset.rm]=v;S.ok=1;save()}}
+ else if(t.dataset.rt){var z=parseFloat(t.value);if(z>0){S.rt[t.dataset.rt]=z;save()}}
+ else if(t.dataset.rb||t.dataset.rd){var u=parseFloat(t.value);if(u>0){if(t.dataset.rb)S.rb=u;else S.rd=u;save()}}
+ else if(t.dataset.am){S.am[t.dataset.am]=t.value;save();t.parentNode.querySelector("b").textContent=est(+t.dataset.l,+t.value)}});
+document.addEventListener("change",function(e){var d=e.target.dataset;if(d.rm||d.rt||d.rb||d.rd)render()});
+render();
+</script>
+</body>
+</html>
